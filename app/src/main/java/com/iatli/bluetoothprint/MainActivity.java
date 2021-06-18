@@ -13,8 +13,6 @@ import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
-import com.google.gson.JsonObject;
-import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
 
 
@@ -36,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webview);
         webView.setWebViewClient(new WebViewClient(){
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                Log.d(TAG, url);
                 if(url.contains(HIDDEN_URL_NAME)){
                     if(bluetoothPrinter == null){
                         bluetoothPrinter = new BluetoothPrinter();
@@ -64,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "Bluetooth permission is sent");
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH}, MainActivity.PERMISSION_BLUETOOTH);
         } else {
-            Log.d(TAG, "Bluetooth is OK. Now downloading text from given URL");
+            Log.d(TAG, "Bluetooth is OK. Now downloading text from given URL" + urlToPrint);
 
             Ion.with(this)
                     .load(urlToPrint)

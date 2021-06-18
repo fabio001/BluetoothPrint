@@ -13,6 +13,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 import com.dantsu.printerthermal_escpos_bluetooth.Printer;
 import com.dantsu.printerthermal_escpos_bluetooth.bluetooth.BluetoothPrinterSocketConnection;
@@ -22,6 +23,7 @@ import android.util.DisplayMetrics;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG ="RAFY";
+    private static final String BASE_URL = "http://rafetdurgut.com/Yenorsan/";
     public static final int PERMISSION_BLUETOOTH = 1551;
 
     private WebView webView=null;
@@ -31,11 +33,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         webView = (WebView) findViewById(R.id.webview);
-        String unencodedHtml =
-                "<html><body> <h3> RAFY'NIN WEB SITESI </h3> </body></html>";
-        String  encodedHtml = Base64.encodeToString(unencodedHtml.getBytes(), Base64.NO_PADDING);
-        webView.loadData(encodedHtml, "text/html", "base64");
+
+        webView.setWebViewClient(new WebViewClient(){
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                view.loadUrl(url);
+                return true;
+            }
+        });
+
         Log.d(TAG, "App is loaded");
+        webView.loadUrl(BASE_URL);
     }
 
     public void printIt() {
@@ -56,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             printer.printFormattedText(
-                            "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.ic_baseline_import_export_24, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
+                            //"[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, this.getApplicationContext().getResources().getDrawableForDensity(R.drawable.ic_baseline_import_export_24, DisplayMetrics.DENSITY_MEDIUM)) + "</img>\n" +
                                     "[L]\n" +
                                     "[C]<u><font size='big'>RAFET RAPORLAMA</font></u>\n" +
                                     "[L]\n" +
@@ -146,5 +153,7 @@ public class MainActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity( intent);
     }
+
+
 
 }

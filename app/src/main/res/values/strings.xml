@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">BluetoothPrint</string>
+    <string name="app_name">YENORSAN</string>
+    <string name="bluetoothpair">İlk önce bir bluetooth yazıcı eşleştirin.</string>
+    <string name="printing">Sayfa yazdırılıyor...</string>
+    <string name="printed">Yazdırma tamamlandı.</string>
+    <string name="bluetoothpermgrant">Bluetooth izni verildi.</string>
+    <string name="bluetoothpermdenied">Bluetooth yazici kullanmak için izin vermelisiniz!</string>
+    <string name="warnuser">Önce internetinizi kontrol edin. İnternet çalışıyorsa hata için geliştirici ile iletişime geçin.</string>
+
 </resources>

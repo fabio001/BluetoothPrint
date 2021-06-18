@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">YENORSAN</string>
+    <string name="app_name">Yenorsan Rapor</string>
     <string name="bluetoothpair">İlk önce bir bluetooth yazıcı eşleştirin.</string>
     <string name="printing">Sayfa yazdırılıyor...</string>
     <string name="printed">Yazdırma tamamlandı.</string>

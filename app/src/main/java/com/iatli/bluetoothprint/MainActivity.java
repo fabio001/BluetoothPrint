@@ -17,7 +17,6 @@ import com.google.gson.JsonObject;
 import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
 
-import java.util.Stack;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG ="YENORSAN";
@@ -34,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        webView = (WebView) findViewById(R.id.webview);
+        webView = findViewById(R.id.webview);
         webView.setWebViewClient(new WebViewClient(){
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if(url.contains(HIDDEN_URL_NAME)){
@@ -70,43 +69,40 @@ public class MainActivity extends AppCompatActivity {
             Ion.with(this)
                     .load(urlToPrint)
                     .asJsonObject()
-                    .setCallback(new FutureCallback<JsonObject>() {
-                @Override
-                public void onCompleted(Exception e, JsonObject result) {
-                   if(result != null){
-                       boolean isSuccess = result.get("success").getAsBoolean();
-                       if(isSuccess) {
-                           String formattedText = result.get("print").getAsString();
+                    .setCallback((e, result) -> {
+                       if(result != null){
+                           boolean isSuccess = result.get("success").getAsBoolean();
+                           if(isSuccess) {
+                               String formattedText = result.get("print").getAsString();
 
-                           if(bluetoothPrinter == null){
-                               bluetoothPrinter = new BluetoothPrinter();
+                               if(bluetoothPrinter == null){
+                                   bluetoothPrinter = new BluetoothPrinter();
+                               }
+
+                               int numDevices = bluetoothPrinter.getBluetoothPrinterCount();
+                               if(numDevices<=0){
+                                   Toast.makeText(MainActivity.this, getString(R.string.bluetoothpair), Toast.LENGTH_SHORT).show();
+                                   gotoBluetoothmenu();
+                                   return;
+                               }
+                               Log.d(TAG, "Printing the report...");
+                               bluetoothPrinter.printOnDevice(formattedText);
+                               Toast.makeText(MainActivity.this,getString(R.string.printed), Toast.LENGTH_SHORT).show();
+
+
+
                            }
-
-                           int numDevices = bluetoothPrinter.getBluetoothPrinterCount();
-                           if(numDevices<=0){
-                               Toast.makeText(MainActivity.this, getString(R.string.bluetoothpair), Toast.LENGTH_SHORT).show();
-                               gotoBluetoothmenu();
-                               return;
+                           else{
+                               String errorMessage = result.get("error").getAsString();
+                               Toast.makeText(MainActivity.this, errorMessage,Toast.LENGTH_SHORT).show();
                            }
-                           Log.d(TAG, "Printing the report...");
-                           bluetoothPrinter.printOnDevice(formattedText);
-                           Toast.makeText(MainActivity.this,getString(R.string.printed), Toast.LENGTH_SHORT).show();
-
-
-
                        }
                        else{
-                           String errorMessage = result.get("error").getAsString();
-                           Toast.makeText(MainActivity.this, errorMessage,Toast.LENGTH_SHORT).show();
-                       }
-                   }
-                   else{
-                       Log.d(TAG, "result null geliyor.");
-                       Toast.makeText(MainActivity.this, getString(R.string.warnuser), Toast.LENGTH_LONG).show();
+                           Log.d(TAG, "result null geliyor.");
+                           Toast.makeText(MainActivity.this, getString(R.string.warnuser), Toast.LENGTH_LONG).show();
 
-                   }
-                }
-            });
+                       }
+                    });
 
         }
     }

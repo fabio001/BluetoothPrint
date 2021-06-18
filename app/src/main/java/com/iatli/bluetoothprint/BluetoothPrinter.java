@@ -1,15 +1,21 @@
 package com.iatli.bluetoothprint;
 
 import android.util.Log;
-import com.dantsu.printerthermal_escpos_bluetooth.Printer;
-import com.dantsu.printerthermal_escpos_bluetooth.bluetooth.BluetoothPrinterSocketConnection;
-import com.dantsu.printerthermal_escpos_bluetooth.bluetooth.BluetoothPrinters;
+
+import com.dantsu.escposprinter.EscPosCharsetEncoding;
+import com.dantsu.escposprinter.EscPosPrinter;
+import com.dantsu.escposprinter.connection.bluetooth.BluetoothPrintersConnections;
+import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection;
+import com.dantsu.escposprinter.exceptions.EscPosBarcodeException;
+import com.dantsu.escposprinter.exceptions.EscPosConnectionException;
+import com.dantsu.escposprinter.exceptions.EscPosEncodingException;
+import com.dantsu.escposprinter.exceptions.EscPosParserException;
 
 public class BluetoothPrinter {
     private static final String TAG ="YENORSAN";
 
-    private BluetoothPrinters bluetoothPrinters = null;
-    private BluetoothPrinterSocketConnection[] bluetoothPrinterSocketConnections = null;
+    private BluetoothPrintersConnections bluetoothPrinters = null;
+    private BluetoothConnection[] bluetoothConnections = null;
     private int selectedDevice;
 
     public BluetoothPrinter(){
@@ -28,13 +34,27 @@ public class BluetoothPrinter {
             selectedDevice=0;
         }
 
-        Printer printer = new Printer(bluetoothPrinterSocketConnections[selectedDevice],
-                203, 78f, 52);
+        EscPosPrinter printer = null;
+        try {
+            printer = new EscPosPrinter(bluetoothConnections[selectedDevice],
+                    203, 78f, 52,
+                    new EscPosCharsetEncoding("windows-1254", 16));
+
+            printer.printFormattedText(formattedText);
+        } catch (EscPosConnectionException e) {
+            Log.d(TAG, e.getLocalizedMessage());
+        } catch (EscPosBarcodeException e) {
+            Log.d(TAG, e.getLocalizedMessage());
+        } catch (EscPosEncodingException e) {
+            Log.d(TAG, e.getLocalizedMessage());
+        } catch (EscPosParserException e) {
+            Log.d(TAG, e.getLocalizedMessage());
+        }
+
 
         if(printer == null){
             return false;
         }
-        printer.printFormattedText(formattedText);
 
         Log.d(TAG, "printing function done");
         return true;
@@ -49,10 +69,10 @@ public class BluetoothPrinter {
 
     public int getBluetoothPrinterCount(){
         if(bluetoothPrinters == null)
-            bluetoothPrinters = new BluetoothPrinters();
-        bluetoothPrinterSocketConnections = bluetoothPrinters.getList();
-        if(bluetoothPrinterSocketConnections ==null)
+            bluetoothPrinters = new BluetoothPrintersConnections();
+        bluetoothConnections = bluetoothPrinters.getList();
+        if(bluetoothConnections ==null)
             return 0;
-        return bluetoothPrinterSocketConnections.length;
+        return bluetoothConnections.length;
     }
 }

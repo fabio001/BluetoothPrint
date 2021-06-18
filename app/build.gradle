@@ -37,7 +37,7 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    implementation 'com.github.DantSu:PrinterThermal-ESCPOS-Android:1.1.2'
+    implementation 'com.github.DantSu:ESCPOS-ThermalPrinter-Android:2.0.11'
     //compile 'com.beardedhen:androidbootstrap:2.3.2'
     implementation "com.koushikdutta.ion:ion:3.1.0"
 }

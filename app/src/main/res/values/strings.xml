@@ -6,5 +6,6 @@
     <string name="bluetoothpermgrant">Bluetooth izni verildi.</string>
     <string name="bluetoothpermdenied">Bluetooth yazici kullanmak için izin vermelisiniz!</string>
     <string name="warnuser">Önce internetinizi kontrol edin. İnternet çalışıyorsa hata için geliştirici ile iletişime geçin.</string>
+    <string name="printError">Yazdırma işleminde problem oldu. Yazıcının bağlı ve erişilebilir olduğundan emin olun.</string>
 
 </resources>

@@ -1,5 +1,6 @@
 package com.iatli.bluetoothprint;
 
+import android.graphics.Bitmap;
 import android.util.Log;
 
 import com.dantsu.escposprinter.EscPosCharsetEncoding;
@@ -18,7 +19,22 @@ public class BluetoothPrinter {
     private BluetoothConnection[] bluetoothConnections = null;
     private int selectedDevice;
 
+    private EscPosPrinter printer=null;
+
     public BluetoothPrinter(){
+        printer=null;
+        try {
+            int numDevices = getBluetoothPrinterCount();
+
+            if(numDevices>0) {
+                printer = new EscPosPrinter(bluetoothConnections[selectedDevice],
+                        203, 78f, 52,
+                        new EscPosCharsetEncoding("windows-1254", 16));
+            }
+        }
+        catch (EscPosConnectionException e) {
+            Log.d(TAG, e.getLocalizedMessage());
+        }
         selectedDevice = 0;
     }
 
@@ -29,35 +45,47 @@ public class BluetoothPrinter {
         if(numDevices<=0)
             return false;
 
+        if(numDevices>0 && printer==null){
+            try {
+                printer = new EscPosPrinter(bluetoothConnections[selectedDevice],
+                        203, 78f, 52,
+                        new EscPosCharsetEncoding("windows-1254", 16));
+            } catch (EscPosConnectionException e) {
+                e.printStackTrace();
+            }
+        }
+
         //somehow device get lost connection is lost one of them. Thus it will get first one.
         if(selectedDevice>=numDevices){
             selectedDevice=0;
         }
 
-        EscPosPrinter printer = null;
-        try {
-            printer = new EscPosPrinter(bluetoothConnections[selectedDevice],
-                    203, 78f, 52,
-                    new EscPosCharsetEncoding("windows-1254", 16));
+        if(printer == null){
+            return false;
+        }
 
+        try {
             printer.printFormattedText(formattedText);
         } catch (EscPosConnectionException e) {
             Log.d(TAG, e.getLocalizedMessage());
+            return false;
         } catch (EscPosBarcodeException e) {
             Log.d(TAG, e.getLocalizedMessage());
+            return false;
         } catch (EscPosEncodingException e) {
             Log.d(TAG, e.getLocalizedMessage());
+            return false;
         } catch (EscPosParserException e) {
             Log.d(TAG, e.getLocalizedMessage());
-        }
-
-
-        if(printer == null){
             return false;
         }
 
         Log.d(TAG, "printing function done");
         return true;
+    }
+
+    public EscPosPrinter getPrinterInstance(){
+        return printer;
     }
 
     public void setSelectedDevice(int selectedDevice){
@@ -74,5 +102,10 @@ public class BluetoothPrinter {
         if(bluetoothConnections ==null)
             return 0;
         return bluetoothConnections.length;
+    }
+
+
+    public void printBitmap(Bitmap bitmap){
+
     }
 }

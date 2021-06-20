@@ -8,13 +8,17 @@ import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
-import com.koushikdutta.ion.Ion;
 
+import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG ="YENORSAN";
@@ -24,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
 
     private BluetoothPrinter bluetoothPrinter=null;
 
+    //private ImageView imageView;
+
     private WebView webView=null;
 
     @Override
@@ -32,31 +38,82 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         webView = findViewById(R.id.webview);
+        //imageView = findViewById(R.id.imgview);
+
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.getSettings().setJavaScriptEnabled(true);
+
         webView.setWebViewClient(new WebViewClient(){
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Log.d(TAG, url);
+                view.loadUrl(url);
+                return true;
+            }
+
+
+            //convert to bitmap image and print
+            public void onPageFinished(WebView view, String url) {
+                //if it contains print in URL
                 if(url.contains(HIDDEN_URL_NAME)){
+                    Log.d(TAG, "Web sayfasinin görüntüsü için onFinished fonksiyonuna gelindi:" + url);
                     if(bluetoothPrinter == null){
                         bluetoothPrinter = new BluetoothPrinter();
                     }
                     //get the formatted text from URL
                     Toast.makeText(MainActivity.this, getString(R.string.printing), Toast.LENGTH_SHORT).show();
-                    printUrl(url);
-                    return true;
+                    Thread t = new Thread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            try {
+                                Thread.sleep(1500);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            Bitmap reportBitmap = getBitmapImageFromWebView();
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+
+                                    //imageView.setImageBitmap(reportBitmap);
+                                    printUrl(url, reportBitmap);
+                                }
+                            });
+
+                        }
+                    });
+                    t.start();
                 }
-                view.loadUrl(url);
-                return true;
             }
         });
 
-        Log.d(TAG, "App is loaded");
         webView.loadUrl(BASE_URL);
+        Log.d(TAG, "App is loaded");
+    }
 
+    private Bitmap getBitmapImageFromWebView(){
+
+        webView.measure(View.MeasureSpec.makeMeasureSpec(
+                View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        webView.layout(0, 0, webView.getMeasuredWidth(),
+                webView.getMeasuredHeight());
+        webView.setDrawingCacheEnabled(true);
+        webView.buildDrawingCache();
+        Bitmap bm = Bitmap.createBitmap(webView.getMeasuredWidth(),
+                webView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+
+        Canvas bigcanvas = new Canvas(bm);
+        Paint paint = new Paint();
+        int iHeight = bm.getHeight();
+        bigcanvas.drawBitmap(bm, 0, iHeight, paint);
+        webView.draw(bigcanvas);
+        return bm;
 
     }
 
     //public void yazdir(View view) {
-    private void printUrl(String urlToPrint){
+    private void printUrl(String urlToPrint, Bitmap reportBitmap){
         Log.d(TAG, "Printing url "+ urlToPrint);
         //request bluetooth permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED) {
@@ -65,43 +122,26 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.d(TAG, "Bluetooth is OK. Now downloading text from given URL" + urlToPrint);
 
-            Ion.with(this)
-                    .load(urlToPrint)
-                    .asJsonObject()
-                    .setCallback((e, result) -> {
-                       if(result != null){
-                           boolean isSuccess = result.get("success").getAsBoolean();
-                           if(isSuccess) {
-                               String formattedText = result.get("print").getAsString();
-
-                               if(bluetoothPrinter == null){
-                                   bluetoothPrinter = new BluetoothPrinter();
-                               }
-
-                               int numDevices = bluetoothPrinter.getBluetoothPrinterCount();
-                               if(numDevices<=0){
-                                   Toast.makeText(MainActivity.this, getString(R.string.bluetoothpair), Toast.LENGTH_SHORT).show();
-                                   gotoBluetoothmenu();
-                                   return;
-                               }
-                               Log.d(TAG, "Printing the report...");
-                               bluetoothPrinter.printOnDevice(formattedText);
-                               Toast.makeText(MainActivity.this,getString(R.string.printed), Toast.LENGTH_SHORT).show();
+            if(bluetoothPrinter == null){
+                bluetoothPrinter = new BluetoothPrinter();
+            }
+            int numDevices = bluetoothPrinter.getBluetoothPrinterCount();
+            if(numDevices<=0){
+                Toast.makeText(MainActivity.this, getString(R.string.bluetoothpair), Toast.LENGTH_SHORT).show();
+                gotoBluetoothmenu();
+                return;
+            }
+            Log.d(TAG, "Printing the report...");
+            String formattedText =
+                    "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(bluetoothPrinter.getPrinterInstance(), reportBitmap)+"</img>\n";
 
 
-
-                           }
-                           else{
-                               String errorMessage = result.get("error").getAsString();
-                               Toast.makeText(MainActivity.this, errorMessage,Toast.LENGTH_SHORT).show();
-                           }
-                       }
-                       else{
-                           Log.d(TAG, "result null geliyor.");
-                           Toast.makeText(MainActivity.this, getString(R.string.warnuser), Toast.LENGTH_LONG).show();
-
-                       }
-                    });
+            if(bluetoothPrinter.printOnDevice(formattedText)) {
+                Toast.makeText(MainActivity.this, getString(R.string.printed), Toast.LENGTH_SHORT).show();
+            }
+            else{
+                Toast.makeText(MainActivity.this, getString(R.string.printError), Toast.LENGTH_SHORT).show();
+            }
 
         }
     }

@@ -70,11 +70,11 @@ public class MainActivity extends AppCompatActivity {
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
-                            Bitmap reportBitmap = getBitmapImageFromWebView();
+
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-
+                                    Bitmap reportBitmap = getBitmapImageFromWebView();
                                     //imageView.setImageBitmap(reportBitmap);
                                     printUrl(url, reportBitmap);
                                 }

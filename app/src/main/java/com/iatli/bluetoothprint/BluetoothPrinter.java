@@ -18,6 +18,9 @@ public class BluetoothPrinter {
     private BluetoothPrintersConnections bluetoothPrinters = null;
     private BluetoothConnection[] bluetoothConnections = null;
     private int selectedDevice;
+    private int printerResolution=203;
+    private int printerWidthMM=68;
+    private int printerNChar=52;
 
     private EscPosPrinter printer=null;
 
@@ -28,7 +31,7 @@ public class BluetoothPrinter {
 
             if(numDevices>0) {
                 printer = new EscPosPrinter(bluetoothConnections[selectedDevice],
-                        203, 78f, 52,
+                        printerResolution, printerWidthMM, printerNChar,
                         new EscPosCharsetEncoding("windows-1254", 16));
             }
         }
@@ -48,7 +51,7 @@ public class BluetoothPrinter {
         if(numDevices>0 && printer==null){
             try {
                 printer = new EscPosPrinter(bluetoothConnections[selectedDevice],
-                        203, 78f, 52,
+                        printerResolution, printerWidthMM, printerNChar,
                         new EscPosCharsetEncoding("windows-1254", 16));
             } catch (EscPosConnectionException e) {
                 e.printStackTrace();

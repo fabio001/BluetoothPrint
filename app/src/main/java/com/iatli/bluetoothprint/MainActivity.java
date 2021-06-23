@@ -9,16 +9,21 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
+
+import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG ="YENORSAN";
@@ -112,6 +117,27 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private String parseImage(Bitmap fullImage, EscPosPrinter printer){
+        StringBuilder printText = new StringBuilder();
+
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        fullImage.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        byte[] byteArray = byteArrayOutputStream .toByteArray();
+        byte[] decodedString = Base64.decode(byteArray, Base64.DEFAULT);
+
+        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+
+        int width = decodedByte.getWidth(), height = decodedByte.getHeight();
+
+        StringBuilder textToPrint = new StringBuilder();
+        for(int y = 0; y < height; y += 256) {
+            Bitmap bitmap = Bitmap.createBitmap(decodedByte, 0, y, width, (y + 256 >= height) ? height - y : 256);
+            textToPrint.append("[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, bitmap) + "</img>\n");
+        }
+
+        return printText.toString();
+    }
+
     //public void yazdir(View view) {
     private void printUrl(String urlToPrint, Bitmap reportBitmap){
         Log.d(TAG, "Printing url "+ urlToPrint);
@@ -132,8 +158,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             Log.d(TAG, "Printing the report...");
-            String formattedText =
-                    "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(bluetoothPrinter.getPrinterInstance(), reportBitmap)+"</img>\n";
+            String formattedText = parseImage(reportBitmap, bluetoothPrinter.getPrinterInstance());
+                   // "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(bluetoothPrinter.getPrinterInstance(), reportBitmap)+"</img>\n";
 
 
             if(bluetoothPrinter.printOnDevice(formattedText)) {

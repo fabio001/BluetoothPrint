@@ -81,7 +81,16 @@ public class MainActivity extends AppCompatActivity {
                                 public void run() {
                                     Bitmap reportBitmap = getBitmapImageFromWebView();
                                     //imageView.setImageBitmap(reportBitmap);
-                                    printUrl(url, reportBitmap);
+                                    if(reportBitmap == null){
+                                        Log.d(TAG, "Webview cannot be converted to bitmap!");
+                                        Toast.makeText(MainActivity.this, "Web görüntüsü oluşturulamıyor", Toast.LENGTH_SHORT).show();
+
+                                    }
+                                    else {
+                                        Log.d(TAG, "Görüntü oluşturuldu, print ediliyor");
+                                        printUrl(url, reportBitmap);
+
+                                    }
                                 }
                             });
 
@@ -119,19 +128,12 @@ public class MainActivity extends AppCompatActivity {
 
     private String parseImage(Bitmap fullImage, EscPosPrinter printer){
         StringBuilder printText = new StringBuilder();
-
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        fullImage.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-        byte[] byteArray = byteArrayOutputStream .toByteArray();
-        byte[] decodedString = Base64.decode(byteArray, Base64.DEFAULT);
-
-        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-
-        int width = decodedByte.getWidth(), height = decodedByte.getHeight();
+        int width = fullImage.getWidth();
+        int height = fullImage.getHeight();
 
         StringBuilder textToPrint = new StringBuilder();
         for(int y = 0; y < height; y += 256) {
-            Bitmap bitmap = Bitmap.createBitmap(decodedByte, 0, y, width, (y + 256 >= height) ? height - y : 256);
+            Bitmap bitmap = Bitmap.createBitmap(fullImage, 0, y, width, (y + 256 >= height) ? height - y : 256);
             textToPrint.append("[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, bitmap) + "</img>\n");
         }
 
@@ -157,6 +159,11 @@ public class MainActivity extends AppCompatActivity {
                 gotoBluetoothmenu();
                 return;
             }
+
+//            if(bluetoothPrinter.getPrinterInstance() == null){
+//                Log.d(TAG, "Bluetooth printer null. Alet yok");
+//                return;
+//            }
             Log.d(TAG, "Printing the report...");
             String formattedText = parseImage(reportBitmap, bluetoothPrinter.getPrinterInstance());
                    // "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(bluetoothPrinter.getPrinterInstance(), reportBitmap)+"</img>\n";

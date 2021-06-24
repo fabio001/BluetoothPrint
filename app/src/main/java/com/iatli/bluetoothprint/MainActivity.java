@@ -160,10 +160,11 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-//            if(bluetoothPrinter.getPrinterInstance() == null){
-//                Log.d(TAG, "Bluetooth printer null. Alet yok");
-//                return;
-//            }
+            if(bluetoothPrinter.getPrinterInstance() == null){
+               Log.d(TAG, "Bluetooth printer null. Alet yok");
+                Toast.makeText(MainActivity.this, "Printer ayarlarını kontrol edin. Problem var!", Toast.LENGTH_SHORT).show();
+               return;
+            }
             Log.d(TAG, "Printing the report...");
             String formattedText = parseImage(reportBitmap, bluetoothPrinter.getPrinterInstance());
                    // "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(bluetoothPrinter.getPrinterInstance(), reportBitmap)+"</img>\n";

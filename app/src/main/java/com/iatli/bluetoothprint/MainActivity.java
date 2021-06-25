@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String parseImage(Bitmap fullImage, EscPosPrinter printer){
-        StringBuilder printText = new StringBuilder();
+
         int width = fullImage.getWidth();
         int height = fullImage.getHeight();
 
@@ -136,8 +136,9 @@ public class MainActivity extends AppCompatActivity {
             Bitmap bitmap = Bitmap.createBitmap(fullImage, 0, y, width, (y + 256 >= height) ? height - y : 256);
             textToPrint.append("[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, bitmap) + "</img>\n");
         }
+        textToPrint.append("[C]\n");
 
-        return printText.toString();
+        return textToPrint.toString();
     }
 
     //public void yazdir(View view) {

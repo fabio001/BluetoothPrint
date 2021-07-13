@@ -6,12 +6,20 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".MainActivity">
-    <WebView
-        android:id="@+id/webview"
+
+    <ScrollView
+        android:id="@+id/scrollWeb"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        />
+        android:layout_height="match_parent">
+
+        <WebView
+            android:id="@+id/webview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+
+            />
+    </ScrollView>
+
 
 
     <!--<com.beardedhen.androidbootstrap.BootstrapButton
@@ -45,10 +53,6 @@
             />
 
     </LinearLayout>-->
-    <!--For debugging purposes-->
-    <!--<ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/imgview"/>-->
+
 
 </LinearLayout>

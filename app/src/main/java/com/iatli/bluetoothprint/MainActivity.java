@@ -18,32 +18,34 @@ import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 
-import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG ="YENORSAN";
     private static final String BASE_URL = "http://rafetdurgut.com/Yenorsan/";
     public static final int PERMISSION_BLUETOOTH = 1551;
     private static final String HIDDEN_URL_NAME = "print";
+    private static final boolean DEBUG_ENABLE = false;
+    private ScrollView scrollView;
 
     private BluetoothPrinter bluetoothPrinter=null;
 
-    //private ImageView imageView;
-
     private WebView webView=null;
+    public static Bitmap bmp = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        scrollView = findViewById(R.id.scrollWeb);
         webView = findViewById(R.id.webview);
-        //imageView = findViewById(R.id.imgview);
 
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setJavaScriptEnabled(true);
@@ -58,51 +60,57 @@ public class MainActivity extends AppCompatActivity {
 
             //convert to bitmap image and print
             public void onPageFinished(WebView view, String url) {
+
                 //if it contains print in URL
                 if(url.contains(HIDDEN_URL_NAME)){
-                    Log.d(TAG, "Web sayfasinin görüntüsü için onFinished fonksiyonuna gelindi:" + url);
+                    Log.d(TAG, "Web sayfasinin görüntüsü için onFinished fonksiyonuna gelindi: " + url);
                     if(bluetoothPrinter == null){
                         bluetoothPrinter = new BluetoothPrinter();
                     }
                     //get the formatted text from URL
                     Toast.makeText(MainActivity.this, getString(R.string.printing), Toast.LENGTH_SHORT).show();
-                    Thread t = new Thread(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            try {
-                                Thread.sleep(1500);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Bitmap reportBitmap = getBitmapImageFromWebView();
-                                    //imageView.setImageBitmap(reportBitmap);
-                                    if(reportBitmap == null){
-                                        Log.d(TAG, "Webview cannot be converted to bitmap!");
-                                        Toast.makeText(MainActivity.this, "Web görüntüsü oluşturulamıyor", Toast.LENGTH_SHORT).show();
-
-                                    }
-                                    else {
-                                        Log.d(TAG, "Görüntü oluşturuldu, print ediliyor");
-                                        printUrl(url, reportBitmap);
-
-                                    }
-                                }
-                            });
-
+                    Thread t = new Thread(() -> {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                         }
+
+                        runOnUiThread(() -> {
+                            Bitmap reportBitmap = getBitmapImageFromWebView();
+
+                            if (DEBUG_ENABLE){
+                                Intent intent = new Intent(MainActivity.this, DebugImageActivity.class);
+                                bmp = reportBitmap;
+                                startActivity(intent);
+                                return;
+                            }
+                            if(reportBitmap == null){
+                                Log.d(TAG, "Webview cannot be converted to bitmap!");
+                                Toast.makeText(MainActivity.this, "Web görüntüsü oluşturulamıyor", Toast.LENGTH_SHORT).show();
+
+                            }
+                            else {
+                                Log.d(TAG, "Görüntü oluşturuldu, print ediliyor");
+                                printUrl(url, reportBitmap);
+
+                            }
+                        });
+
                     });
                     t.start();
                 }
             }
         });
 
-        webView.loadUrl(BASE_URL);
+        if(DEBUG_ENABLE) {
+            webView.loadUrl("http://rafetdurgut.com/Yenorsan/print.php?id=223");
+        }
+        else {
+            webView.loadUrl(BASE_URL);
+        }
         Log.d(TAG, "App is loaded");
+
     }
 
     private Bitmap getBitmapImageFromWebView(){
@@ -112,6 +120,13 @@ public class MainActivity extends AppCompatActivity {
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
         webView.layout(0, 0, webView.getMeasuredWidth(),
                 webView.getMeasuredHeight());
+
+        int height = webView.getMeasuredHeight();
+        int webViewHeight = webView.getHeight();
+        int scrollHeight =scrollView.getHeight();
+
+        Log.d(TAG, "measured:"+ height+", webviewH:"+ webViewHeight +", scrollH:"+scrollHeight);
+
         webView.setDrawingCacheEnabled(true);
         webView.buildDrawingCache();
         Bitmap bm = Bitmap.createBitmap(webView.getMeasuredWidth(),
@@ -119,10 +134,28 @@ public class MainActivity extends AppCompatActivity {
 
         Canvas bigcanvas = new Canvas(bm);
         Paint paint = new Paint();
+
         int iHeight = bm.getHeight();
         bigcanvas.drawBitmap(bm, 0, iHeight, paint);
         webView.draw(bigcanvas);
         return bm;
+        /*if(scrollHeight >= webViewHeight) {
+            return bm;
+        }
+        else{
+            Log.d(TAG, "Parsing webview into 10 pixels to draw full height");
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            int h=0;
+            while(h < webViewHeight){
+                bigcanvas.drawBitmap(bm, 0, h + STEP, paint);
+                webView.draw(bigcanvas);
+                h += webViewHeight;
+                webView.scrollTo(0, h);
+            }
+
+            return bm;
+        }*/
+
 
     }
 

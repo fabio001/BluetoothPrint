@@ -14,7 +14,12 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-        <activity android:name=".DebugImageActivity"></activity>
+
+        <activity android:name=".PrintActivity"
+            android:configChanges="orientation"
+            android:screenOrientation="portrait"></activity>
+
+        <activity android:name=".DebugImageActivity" />
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation"

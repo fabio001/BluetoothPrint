@@ -21,13 +21,18 @@ import android.widget.Toast;
 import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 
+import java.util.ArrayList;
+
 public class PrintActivity extends AppCompatActivity {
     private WebView webView;
     public static final String PRINT_KEY="PRINTING_INFO_PASS";
+    public static final String PRINT_LIST_KEY="PRINTING_LIST_PASS";
     private ScrollView scrollView;
     private BluetoothPrinter bluetoothPrinter=null;
     public static Bitmap bmp = null;
 
+    private ArrayList<String> listUrls;
+    private static final String BASE_URL_PRINT= "http://rafetdurgut.com/Yenorsan/print.php?id=";
     private final int WIDTH = 550;
 
     @Override
@@ -38,16 +43,29 @@ public class PrintActivity extends AppCompatActivity {
         webView = findViewById(R.id.print_webview);
         scrollView = findViewById(R.id.scrollWeb);
 
+
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setJavaScriptEnabled(true);
 
         Intent intent = getIntent();
         if(intent != null){
+            String listStr = intent.getStringExtra(PRINT_LIST_KEY);
             String url = intent.getStringExtra(PRINT_KEY);
-            if (url != null) {
-                //load and print
-                webView.loadUrl(url);
-                startPrintingForURL(url);
+            listUrls = new ArrayList<>();
+            if (listStr != null){
+                String[] l = listStr.split("-");
+                for (String s:l) {
+                    listUrls.add(BASE_URL_PRINT + s);
+                }
+                Log.d(MainActivity.TAG, String.format("There are %d printing items in the list.", listUrls.size()));
+                startPrintingForURL();
+            }
+            else {
+                if (url != null) {
+                    listUrls.add(url);
+                    startPrintingForURL();
+                }
+
             }
         }
 
@@ -119,39 +137,54 @@ public class PrintActivity extends AppCompatActivity {
     }
 
 
-    private void startPrintingForURL(String url){
-        Log.d(MainActivity.TAG, "Printing Activity tries to print: " + url);
+    private void startPrintingForURL(){
+        if(listUrls.isEmpty())
+            return;
+
         if(bluetoothPrinter == null){
             bluetoothPrinter = new BluetoothPrinter();
         }
         //get the formatted text from URL
         Toast.makeText(PrintActivity.this, getString(R.string.printing), Toast.LENGTH_SHORT).show();
         Thread t = new Thread(() -> {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            while(!listUrls.isEmpty()) {
+                Log.d(MainActivity.TAG, "Printing Activity tries to print: " + listUrls.get(0));
+                runOnUiThread(() -> {
+                    webView.loadUrl(listUrls.get(0));
+                });
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                runOnUiThread(() -> {
+
+                    Bitmap reportBitmap = getBitmapImageFromWebView();
+
+                    //DEBUG
+                    if (MainActivity.DEBUG_ENABLE) {
+                        Intent intent = new Intent(PrintActivity.this, DebugImageActivity.class);
+                        bmp = reportBitmap;
+                        startActivity(intent);
+                        return;
+                    }
+
+
+                    if (reportBitmap == null) {
+                        Log.d(MainActivity.TAG, "Webview cannot be converted to bitmap!");
+                        Toast.makeText(PrintActivity.this, "Web görüntüsü oluşturulamıyor", Toast.LENGTH_SHORT).show();
+
+                    } else {
+                        Log.d(MainActivity.TAG, "Görüntü oluşturuldu, print ediliyor");
+                        printUrl(listUrls.get(0), reportBitmap);
+                    }
+                    //continue if url exist
+                    listUrls.remove(0);
+                });
             }
-
-            runOnUiThread(() -> {
-                Bitmap reportBitmap = getBitmapImageFromWebView();
-
-                if (MainActivity.DEBUG_ENABLE){
-                    Intent intent = new Intent(PrintActivity.this, DebugImageActivity.class);
-                    bmp = reportBitmap;
-                    startActivity(intent);
-                    return;
-                }
-                if(reportBitmap == null){
-                    Log.d(MainActivity.TAG, "Webview cannot be converted to bitmap!");
-                    Toast.makeText(PrintActivity.this, "Web görüntüsü oluşturulamıyor", Toast.LENGTH_SHORT).show();
-
-                }
-                else {
-                    Log.d(MainActivity.TAG, "Görüntü oluşturuldu, print ediliyor");
-                    printUrl(url, reportBitmap);
-
-                }
+            runOnUiThread(() ->{
                 //destroy the activity. MainActivity should continue. This activity is just for printing.
                 finish();
             });

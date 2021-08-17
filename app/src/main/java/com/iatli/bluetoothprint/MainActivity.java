@@ -16,6 +16,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String BASE_URL = "http://rafetdurgut.com/Yenorsan/";
     public static final int PERMISSION_BLUETOOTH = 1551;
     private static final String HIDDEN_URL_NAME = "print";
+    private static final String HIDDEN_URL_NAME2 = "yazilacaklar";
 
     private WebView webView=null;
 
@@ -38,14 +39,27 @@ public class MainActivity extends AppCompatActivity {
 
             //convert to bitmap image and print
             public void onPageFinished(WebView view, String url) {
+                Intent intent = new Intent(MainActivity.this, PrintActivity.class);
+                if (url.contains(HIDDEN_URL_NAME2)){
+                    Log.d(TAG, "Web sayfasinin görüntüsü birden fazla sayfa icin yazdiriliyor: " + url);
+                    String[] splittedURL = url.split("secililer=-");
+                    if(splittedURL.length <2){
+                        return;
+                    }
+                    // parse id of the printing item
+                    String listurls = splittedURL[1];
+                    intent.putExtra(PrintActivity.PRINT_LIST_KEY, listurls);
+                    startActivity(intent);
+                }
 
                 //if it contains print in URL
                 if(url.contains(HIDDEN_URL_NAME)){
-                    Log.d(TAG, "Web sayfasinin görüntüsü için onFinished fonksiyonuna gelindi: " + url);
-                    Intent intent = new Intent(MainActivity.this, PrintActivity.class);
+                    Log.d(TAG, "Web sayfasinin görüntüsü bir sayfa icin yazdiriliyor: " + url);
                     intent.putExtra(PrintActivity.PRINT_KEY, url);
                     startActivity(intent);
                 }
+
+
             }
         });
 

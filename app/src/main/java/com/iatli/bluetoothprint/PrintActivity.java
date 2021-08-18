@@ -22,17 +22,20 @@ import com.dantsu.escposprinter.EscPosPrinter;
 import com.dantsu.escposprinter.textparser.PrinterTextParserImg;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PrintActivity extends AppCompatActivity {
     private WebView webView;
-    public static final String PRINT_KEY="PRINTING_INFO_PASS";
-    public static final String PRINT_LIST_KEY="PRINTING_LIST_PASS";
+    public static final String PRINT_KEY = "PRINTING_INFO_PASS";
+    public static final String PRINT_LIST_KEY = "PRINTING_LIST_PASS";
     private ScrollView scrollView;
-    private BluetoothPrinter bluetoothPrinter=null;
+    private BluetoothPrinter bluetoothPrinter = null;
     public static Bitmap bmp = null;
-
-    private ArrayList<String> listUrls;
-    private static final String BASE_URL_PRINT= "http://rafetdurgut.com/Yenorsan/print.php?id=";
+    private Thread t;
+    public static List<String> listUrls;
+    private static final String BASE_URL_PRINT = "http://rafetdurgut.com/Yenorsan/print.php?id=";
     private final int WIDTH = 550;
 
     @Override
@@ -48,19 +51,18 @@ public class PrintActivity extends AppCompatActivity {
         webView.getSettings().setJavaScriptEnabled(true);
 
         Intent intent = getIntent();
-        if(intent != null){
+        if (intent != null) {
             String listStr = intent.getStringExtra(PRINT_LIST_KEY);
             String url = intent.getStringExtra(PRINT_KEY);
-            listUrls = new ArrayList<>();
-            if (listStr != null){
+            listUrls = Collections.synchronizedList(new ArrayList<String>());
+            if (listStr != null) {
                 String[] l = listStr.split("-");
-                for (String s:l) {
+                for (String s : l) {
                     listUrls.add(BASE_URL_PRINT + s);
                 }
                 Log.d(MainActivity.TAG, String.format("There are %d printing items in the list.", listUrls.size()));
                 startPrintingForURL();
-            }
-            else {
+            } else {
                 if (url != null) {
                     listUrls.add(url);
                     startPrintingForURL();
@@ -71,7 +73,7 @@ public class PrintActivity extends AppCompatActivity {
 
     }
 
-    private Bitmap getBitmapImageFromWebView(){
+    private Bitmap getBitmapImageFromWebView() {
         webView.measure(View.MeasureSpec.makeMeasureSpec(
                 View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
@@ -80,9 +82,9 @@ public class PrintActivity extends AppCompatActivity {
 
         int height = webView.getMeasuredHeight();
         int webViewHeight = webView.getHeight();
-        int scrollHeight =scrollView.getHeight();
+        int scrollHeight = scrollView.getHeight();
 
-        Log.d(MainActivity.TAG, "measured:"+ height+", webviewH:"+ webViewHeight +", scrollH:"+scrollHeight);
+        Log.d(MainActivity.TAG, "measured:" + height + ", webviewH:" + webViewHeight + ", scrollH:" + scrollHeight);
 
         webView.setDrawingCacheEnabled(true);
         webView.buildDrawingCache();
@@ -95,12 +97,13 @@ public class PrintActivity extends AppCompatActivity {
         int iHeight = bm.getHeight();
         bigcanvas.drawBitmap(bm, 0, iHeight, paint);
         webView.draw(bigcanvas);
+        webView.setDrawingCacheEnabled(false);
 
         //resize bitmap
-        Log.d(MainActivity.TAG, "Resizing the image (w*h):"+bm.getWidth() + "*"+ bm.getHeight());
+        Log.d(MainActivity.TAG, "Resizing the image (w*h):" + bm.getWidth() + "*" + bm.getHeight());
         float scale_ratio = WIDTH / (float) bm.getWidth();
         Bitmap resized = Bitmap.createScaledBitmap(bm, WIDTH, (int) (iHeight * scale_ratio), true);
-        Log.d(MainActivity.TAG, "Resized (w*h):"+resized.getWidth() + "*"+ resized.getHeight());
+        Log.d(MainActivity.TAG, "Resized (w*h):" + resized.getWidth() + "*" + resized.getHeight());
         return resized;
         /*if(scrollHeight >= webViewHeight) {
             return bm;
@@ -121,13 +124,13 @@ public class PrintActivity extends AppCompatActivity {
 
     }
 
-    private String parseImage(Bitmap fullImage, EscPosPrinter printer){
+    private String parseImage(Bitmap fullImage, EscPosPrinter printer) {
 
         int width = fullImage.getWidth();
         int height = fullImage.getHeight();
 
         StringBuilder textToPrint = new StringBuilder();
-        for(int y = 0; y < height; y += 256) {
+        for (int y = 0; y < height; y += 256) {
             Bitmap bitmap = Bitmap.createBitmap(fullImage, 0, y, width, (y + 256 >= height) ? height - y : 256);
             textToPrint.append("[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(printer, bitmap) + "</img>\n");
         }
@@ -137,40 +140,51 @@ public class PrintActivity extends AppCompatActivity {
     }
 
 
-    private void startPrintingForURL(){
-        if(listUrls.isEmpty())
+    private void startPrintingForURL() {
+        if (listUrls.isEmpty())
             return;
 
-        if(bluetoothPrinter == null){
+
+        if (bluetoothPrinter == null) {
             bluetoothPrinter = new BluetoothPrinter();
         }
         //get the formatted text from URL
         Toast.makeText(PrintActivity.this, getString(R.string.printing), Toast.LENGTH_SHORT).show();
-        Thread t = new Thread(() -> {
-            while(!listUrls.isEmpty()) {
-                Log.d(MainActivity.TAG, "Printing Activity tries to print: " + listUrls.get(0));
+        t= new Thread(() -> {
+            AtomicInteger item_count = new AtomicInteger();
+            synchronized (listUrls) {
+                item_count.set(listUrls.size());
+            }
+            while (item_count.get() > 0) {
+                synchronized (listUrls) {
+                    Log.d(MainActivity.TAG, "Printing Activity tries to print: " + listUrls.get(0));
+                }
+                Log.d(MainActivity.TAG, "UI'da site yukleniyor " + listUrls.get(0));
                 runOnUiThread(() -> {
-                    webView.loadUrl(listUrls.get(0));
+                    synchronized (listUrls) {
+                        webView.loadUrl(listUrls.get(0));
+                    }
                 });
-
+                Log.d(MainActivity.TAG, "UI'da site yuklendi. 3sn bekliyor ");
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(3000);
                 } catch (InterruptedException e) {
+                    Log.d(MainActivity.TAG, e.getMessage());
                     e.printStackTrace();
                 }
-
+                Log.d(MainActivity.TAG, "UI thread ile Goruntu alınıyor");
                 runOnUiThread(() -> {
-
                     Bitmap reportBitmap = getBitmapImageFromWebView();
+                    Log.d(MainActivity.TAG, "UI'Bitmap goruntusu olusturdu");
 
                     //DEBUG
                     if (MainActivity.DEBUG_ENABLE) {
                         Intent intent = new Intent(PrintActivity.this, DebugImageActivity.class);
+                        Log.d(MainActivity.TAG, "DEBUG menusune girildi");
                         bmp = reportBitmap;
                         startActivity(intent);
                         return;
                     }
-
 
                     if (reportBitmap == null) {
                         Log.d(MainActivity.TAG, "Webview cannot be converted to bitmap!");
@@ -178,25 +192,46 @@ public class PrintActivity extends AppCompatActivity {
 
                     } else {
                         Log.d(MainActivity.TAG, "Görüntü oluşturuldu, print ediliyor");
-                        printUrl(listUrls.get(0), reportBitmap);
+                        String curl;
+                        synchronized (listUrls) {
+                            curl = listUrls.get(0);
+                        }
+                        printUrl(curl, reportBitmap);
                     }
+                    Log.d(MainActivity.TAG, "Listeden url cikariliyor...");
                     //continue if url exist
-                    listUrls.remove(0);
+                    synchronized (listUrls) {
+                        listUrls.remove(0);
+                        Log.d(MainActivity.TAG, "Listeden ilk eleman silindi");
+                        item_count.set(listUrls.size());
+                        Log.d(MainActivity.TAG, String.format("After removal of the first element, size: %d ", item_count.get()));
+                    }
+                    Log.d(MainActivity.TAG, "3 sn daha bekleniyor");
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        Log.d(MainActivity.TAG, e.getMessage());
+                        e.printStackTrace();
+                    }
                 });
             }
-            runOnUiThread(() ->{
+            runOnUiThread(() -> {
                 //destroy the activity. MainActivity should continue. This activity is just for printing.
-                finish();
+                Log.d(MainActivity.TAG, "Yazdirma bitti, menuden cikiliyor");
+                Intent intent = new Intent(this, MainActivity.class);
+                startActivity(intent);
             });
-
         });
         t.start();
+        Log.d(MainActivity.TAG, "Başka bir thread yazma islemine basladı");
 
     }
 
     //public void yazdir(View view) {
-    private void printUrl(String urlToPrint, Bitmap reportBitmap){
-        Log.d(MainActivity.TAG, "Printing url "+ urlToPrint);
+    private void printUrl(String urlToPrint, Bitmap reportBitmap) {
+        Log.d(MainActivity.TAG, "Printing url " + urlToPrint);
+        if(true)
+            return;
         //request bluetooth permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED) {
             Log.d(MainActivity.TAG, "Bluetooth permission is sent");
@@ -204,17 +239,17 @@ public class PrintActivity extends AppCompatActivity {
         } else {
             Log.d(MainActivity.TAG, "Bluetooth is OK. Now downloading text from given URL" + urlToPrint);
 
-            if(bluetoothPrinter == null){
+            if (bluetoothPrinter == null) {
                 bluetoothPrinter = new BluetoothPrinter();
             }
             int numDevices = bluetoothPrinter.getBluetoothPrinterCount();
-            if(numDevices<=0){
+            if (numDevices <= 0) {
                 Toast.makeText(PrintActivity.this, getString(R.string.bluetoothpair), Toast.LENGTH_SHORT).show();
                 gotoBluetoothmenu();
                 return;
             }
 
-            if(bluetoothPrinter.getPrinterInstance() == null){
+            if (bluetoothPrinter.getPrinterInstance() == null) {
                 Log.d(MainActivity.TAG, "Bluetooth printer null. Alet yok");
                 Toast.makeText(PrintActivity.this, "Printer ayarlarını kontrol edin. Problem var!", Toast.LENGTH_SHORT).show();
                 return;
@@ -224,24 +259,23 @@ public class PrintActivity extends AppCompatActivity {
             // "[C]<img>" + PrinterTextParserImg.bitmapToHexadecimalString(bluetoothPrinter.getPrinterInstance(), reportBitmap)+"</img>\n";
 
 
-            if(bluetoothPrinter.printOnDevice(formattedText)) {
+            if (bluetoothPrinter.printOnDevice(formattedText)) {
                 Toast.makeText(PrintActivity.this, getString(R.string.printed), Toast.LENGTH_SHORT).show();
-            }
-            else{
+            } else {
                 Toast.makeText(PrintActivity.this, getString(R.string.printError), Toast.LENGTH_SHORT).show();
             }
 
         }
     }
 
-    public void gotoBluetoothmenu(){
+    public void gotoBluetoothmenu() {
         Intent intent = new Intent(Intent.ACTION_MAIN, null);
         intent.addCategory(Intent.CATEGORY_LAUNCHER);
         ComponentName cn = new ComponentName("com.android.settings",
                 "com.android.settings.bluetooth.BluetoothSettings");
         intent.setComponent(cn);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity( intent);
+        startActivity(intent);
     }
 
 
@@ -252,12 +286,11 @@ public class PrintActivity extends AppCompatActivity {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             switch (requestCode) {
                 case MainActivity.PERMISSION_BLUETOOTH:
-                    Toast.makeText(this,getString(R.string.bluetoothpermgrant), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.bluetoothpermgrant), Toast.LENGTH_SHORT).show();
                     Log.d(MainActivity.TAG, "Bluetooth permission granted");
                     break;
             }
-        }
-        else if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED){
+        } else if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED) {
             switch (requestCode) {
                 case MainActivity.PERMISSION_BLUETOOTH:
                     Toast.makeText(this, getString(R.string.bluetoothpermdenied), Toast.LENGTH_LONG).show();
